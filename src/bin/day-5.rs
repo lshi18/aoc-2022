@@ -1,12 +1,43 @@
-use std::{fs, str};
+use std::fs;
 
 fn main() {
+    let part1 = |mut acc: Vec<Vec<char>>, (cnt, from, to): &(u32, usize, usize)| {
+        for _i in 0..*cnt {
+            // Not particularly nice !!!
+            let v = acc[*from - 1].pop().unwrap();
+            acc[*to - 1].push(v);
+        }
+        acc
+    };
+
+    let res1 = solution(part1);
+    println!("part 1 res: {:?}", res1);
+
+    let part2 = |mut acc: Vec<Vec<char>>, (cnt, from, to): &(u32, usize, usize)| {
+        let mut tmp: Vec<char> = vec![];
+        for _i in 0..*cnt {
+            // Not particularly nice !!!
+            let v = acc[*from - 1].pop().unwrap();
+            tmp.insert(0, v);
+        }
+        acc[*to - 1].append(&mut tmp);
+        acc
+    };
+
+    let res2 = solution(part2);
+    println!("part 2 res: {:?}", res2);
+}
+
+fn solution<F>(f: F) -> String
+where
+    F: FnMut(Vec<Vec<char>>, &(u32, usize, usize)) -> Vec<Vec<char>>,
+{
     let input = String::from_utf8(fs::read("input-day5.txt").unwrap()).unwrap();
 
     let res = input.trim_end().split("\n\n").collect::<Vec<_>>();
     // let steps = res[1];
 
-    let stacks: [Vec<char>; 9] = [
+    let stacks = vec![
         vec![],
         vec![],
         vec![],
@@ -42,20 +73,12 @@ fn main() {
     });
 
     //println!("2: {:?}", instrs);
-    let stacks = instrs.iter().fold(stacks, |mut acc, (cnt, from, to)| {
-        for _i in 0..*cnt {
-            // Not particularly nice !!!
-            let v = acc[*from - 1].pop().unwrap();
-            acc[*to - 1].push(v);
-        }
-        acc
-    });
+    let stacks = instrs.iter().fold(stacks, f);
     //println!("3: {:?}", stacks);
 
     let res = stacks
         .iter()
         .map(|x| *x.last().unwrap() as u8)
         .collect::<Vec<_>>();
-    let res = str::from_utf8(&res).unwrap();
-    println!("4: {:?}", res);
+    String::from_utf8(res).unwrap()
 }
