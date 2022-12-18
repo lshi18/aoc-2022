@@ -10,6 +10,7 @@ enum Node {
     File(usize),
 }
 
+// Dir struct could be removed and simplifed as part of the Node::Dir constructor.
 #[derive(Debug)]
 struct Dir {
     pub name: String,
@@ -86,25 +87,45 @@ fn handle_cmds(mut dirs: Vec<Dir>, cmds: &[&str]) -> Dir {
     dirs.pop().unwrap()
 }
 
-fn cal_dir_size(root: &Dir, total_size: &mut usize, limit: usize) -> usize {
+trait SizeCalulator {
+    fn calc(&mut self, dir_size: &usize);
+}
+
+struct DirTotalSizeCalculation {
+    total_size: usize,
+    limit: usize,
+}
+
+struct DirMinRequirentCalculation {
+    curr_size: usize,
+    target: usize,
+}
+
+impl SizeCalulator for DirTotalSizeCalculation {
+    fn calc(&mut self, dir_size: &usize) {
+        if *dir_size <= self.limit {
+            self.total_size += *dir_size;
+        }
+    }
+}
+
+impl SizeCalulator for DirMinRequirentCalculation {
+    fn calc(&mut self, dir_size: &usize) {
+        if *dir_size < self.curr_size && *dir_size >= self.target {
+            self.curr_size = *dir_size;
+        }
+    }
+}
+fn cal_dir_size<C: SizeCalulator>(root: &Dir, calculator: &mut C) -> usize {
     let mut dir_size = 0;
     for node in root.children.values() {
         match node {
-            Node::Dir(dir) => dir_size += cal_dir_size(dir, total_size, limit),
+            Node::Dir(dir) => dir_size += cal_dir_size(dir, calculator),
             Node::File(size) => dir_size += size,
         }
     }
 
-    // Part 1:
-    // if dir_size <= limit {
-    //     *total_size += dir_size;
-    // }
-
-    // Part 2:
-    if dir_size < *total_size && dir_size >= limit {
-        *total_size = dir_size;
-    }
-
+    calculator.calc(&dir_size);
     dir_size
 }
 
@@ -126,14 +147,16 @@ fn main() {
 
     let root_after_parsing = handle_cmds(dir_stack, &parsed);
 
-    let mut part1_result: usize = 0;
-    cal_dir_size(&root_after_parsing, &mut part1_result, 100000);
-
     // Part 1
-    let mut root_total_size = 0;
-    let root_dir_size: usize = cal_dir_size(&root_after_parsing, &mut root_total_size, usize::MAX);
+    let mut part1_calculator = DirTotalSizeCalculation {
+        limit: 100000,
+        total_size: 0,
+    };
 
-    println!("part 1 result : {:?}", part1_result);
+    let root_dir_size = cal_dir_size(&root_after_parsing, &mut part1_calculator);
+
+    println!("part 1 result : {:?}", part1_calculator.total_size);
+    assert!(1845346 == part1_calculator.total_size);
 
     // Part 2
     let to_be_freed = 30000000 - (70000000 - root_dir_size);
@@ -142,9 +165,13 @@ fn main() {
         root_dir_size, to_be_freed
     );
 
-    let mut part2_result = root_dir_size;
+    let mut part2_calculator = DirMinRequirentCalculation {
+        target: to_be_freed,
+        curr_size: usize::MAX,
+    };
 
-    cal_dir_size(&root_after_parsing, &mut part2_result, to_be_freed);
+    cal_dir_size(&root_after_parsing, &mut part2_calculator);
 
-    println!("part 2 result: {:?}", part2_result);
+    println!("part 2 result: {:?}", part2_calculator.curr_size);
+    assert!(3636703 == part2_calculator.curr_size);
 }
