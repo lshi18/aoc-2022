@@ -86,17 +86,23 @@ fn handle_cmds(mut dirs: Vec<Dir>, cmds: &[&str]) -> Dir {
     dirs.pop().unwrap()
 }
 
-fn cal_dir_size(root: &Dir, total_size: &mut usize) -> usize {
+fn cal_dir_size(root: &Dir, total_size: &mut usize, limit: usize) -> usize {
     let mut dir_size = 0;
     for node in root.children.values() {
         match node {
-            Node::Dir(dir) => dir_size += cal_dir_size(dir, total_size),
+            Node::Dir(dir) => dir_size += cal_dir_size(dir, total_size, limit),
             Node::File(size) => dir_size += size,
         }
     }
 
-    if dir_size <= 100000 {
-        *total_size += dir_size;
+    // Part 1:
+    // if dir_size <= limit {
+    //     *total_size += dir_size;
+    // }
+
+    // Part 2:
+    if dir_size < *total_size && dir_size >= limit {
+        *total_size = dir_size;
     }
 
     dir_size
@@ -120,8 +126,25 @@ fn main() {
 
     let root_after_parsing = handle_cmds(dir_stack, &parsed);
 
-    let mut total_size: usize = 0;
-    cal_dir_size(&root_after_parsing, &mut total_size);
+    let mut part1_result: usize = 0;
+    cal_dir_size(&root_after_parsing, &mut part1_result, 100000);
 
-    println!("part 1 : {:?}", total_size);
+    // Part 1
+    let mut root_total_size = 0;
+    let root_dir_size: usize = cal_dir_size(&root_after_parsing, &mut root_total_size, usize::MAX);
+
+    println!("part 1 result : {:?}", part1_result);
+
+    // Part 2
+    let to_be_freed = 30000000 - (70000000 - root_dir_size);
+    println!(
+        "root_dir_size : {:?}, to_be_freed: {:?}",
+        root_dir_size, to_be_freed
+    );
+
+    let mut part2_result = root_dir_size;
+
+    cal_dir_size(&root_after_parsing, &mut part2_result, to_be_freed);
+
+    println!("part 2 result: {:?}", part2_result);
 }
