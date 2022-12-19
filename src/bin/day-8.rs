@@ -1,3 +1,10 @@
+/*
+ * https://adventofcode.com/2022/day/8
+ *
+ * The code here are not refactored
+ *
+ * Can it do better for part 2?
+ */
 use std::collections::{HashMap, VecDeque};
 use std::fs;
 
