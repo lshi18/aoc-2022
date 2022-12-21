@@ -1,3 +1,6 @@
+/*
+ * https://adventofcode.com/2022/day/10
+ */
 use std::fs;
 #[derive(Debug)]
 enum Cmd {
