@@ -32,7 +32,9 @@ fn part_1(input: &str) {
             acc += i + 1;
         }
     }
-    println!("part 1 result: {}", acc);
+    //println!("part 1 result: {}", acc);
+
+    assert!(6070 == acc);
 }
 
 fn part_2(input: &str) {
@@ -59,7 +61,8 @@ fn part_2(input: &str) {
         }
     }
 
-    println!("part 2 result: {}", res);
+    // println!("part 2 result: {}", res);
+    assert!(20758 == res);
 }
 
 fn cmp(left: &Value, right: &Value) -> Ordering {
@@ -80,13 +83,21 @@ fn cmp(left: &Value, right: &Value) -> Ordering {
 }
 
 fn cmp_arrays(arr1: &[Value], arr2: &[Value]) -> Ordering {
-    match (arr1.is_empty(), arr2.is_empty()) {
-        (true, true) => Ordering::Equal,
-        (true, false) => Ordering::Less,
-        (false, true) => Ordering::Greater,
-        _ => match cmp(&arr1[0], &arr2[0]) {
-            Ordering::Equal => cmp_arrays(&arr1[1..], &arr2[1..]),
-            ord => ord,
-        },
+    let mut l = arr1;
+    let mut r = arr2;
+
+    loop {
+        match (l.is_empty(), r.is_empty()) {
+            (true, true) => return Ordering::Equal,
+            (true, false) => return Ordering::Less,
+            (false, true) => return Ordering::Greater,
+            _ => match cmp(&l[0], &r[0]) {
+                Ordering::Equal => {
+                    l = &l[1..];
+                    r = &r[1..];
+                }
+                ord => return ord,
+            },
+        }
     }
 }
