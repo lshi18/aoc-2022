@@ -8,16 +8,20 @@ use std::fs;
 
 fn main() {
     let input = String::from_utf8(fs::read("input-day13.txt").unwrap()).unwrap();
-    // let input = String::from_utf8(fs::read("sample.txt").unwrap()).unwrap();
+    //let input = String::from_utf8(fs::read("sample.txt").unwrap()).unwrap();
+
+    part_1(&input);
+
+    part_2(&input);
+}
+
+fn part_1(input: &str) {
     let mut acc: usize = 0;
 
     for (i, pairs) in input.trim_end().split("\n\n").enumerate() {
         let lists = pairs
             .lines()
-            .map(|d| {
-                let v: Value = serde_json::from_str(d).unwrap();
-                v
-            })
+            .map(|d| serde_json::from_str::<Value>(d).unwrap())
             .collect::<Vec<_>>();
 
         // println!("{:?}", lists);
@@ -29,7 +33,33 @@ fn main() {
         }
     }
     println!("part 1 result: {}", acc);
-    // println!("{}", input);
+}
+
+fn part_2(input: &str) {
+    let mut v = input
+        .trim_end()
+        .split('\n')
+        .filter(|s| !s.is_empty())
+        .map(|s| serde_json::from_str::<Value>(s).unwrap())
+        .collect::<Vec<_>>();
+
+    let divider_pkgs = vec![
+        serde_json::from_str::<Value>("[[2]]").unwrap(),
+        serde_json::from_str::<Value>("[[6]]").unwrap(),
+    ];
+    let mut cloned = divider_pkgs.clone();
+
+    v.append(&mut cloned);
+    v.sort_by(|a, b| cmp(a, b));
+
+    let mut res = 1usize;
+    for (i, x) in v.iter().enumerate() {
+        if divider_pkgs.contains(x) {
+            res *= i + 1;
+        }
+    }
+
+    println!("part 2 result: {}", res);
 }
 
 fn cmp(left: &Value, right: &Value) -> Ordering {
