@@ -100,7 +100,7 @@ fn part_2(
 
     let mut part_2_max_pressure = 0;
     let mut paths: (Vec<(NodeIndex, u32)>, Vec<(NodeIndex, u32)>) = (vec![], vec![]);
-    for size in 1..=half_size {
+    for size in (half_size - 3)..=half_size {
         for sub_valves_1 in valves.clone().into_iter().combinations(size) {
             let valves_set = valves.clone().into_iter().collect::<HashSet<_>>();
             let sub_valves_2 = valves_set
