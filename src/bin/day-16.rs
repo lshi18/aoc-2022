@@ -9,8 +9,8 @@ fn maximum_pressure(
     g: &Graph<(String, u32), ()>,
     curr_node: NodeIndex,
     distance_matrix: &HashMap<(NodeIndex, NodeIndex), u32>,
-    //valves: Vec<NodeIndex>,
-    valves: HashSet<NodeIndex>,
+    valves: Vec<NodeIndex>,
+    //valves: HashSet<NodeIndex>,
     time_left: u32,
 ) -> (Vec<(NodeIndex, u32)>, u32) {
     let (_, flow_rate) = g.node_weight(curr_node).unwrap();
@@ -23,9 +23,9 @@ fn maximum_pressure(
     let mut max_pressure = curr_pressure;
 
     // opening curr_node's valve
-    for (_i, v) in valves.iter().enumerate() {
+    for (i, v) in valves.iter().enumerate() {
         let mut closed_valves = valves.clone();
-        closed_valves.remove(v);
+        closed_valves.remove(i);
 
         let dist = *distance_matrix.get(&(curr_node, *v)).unwrap();
 
@@ -49,6 +49,7 @@ fn maximum_pressure(
             max_path = one_path;
         }
     }
+
     (max_path, max_pressure)
 }
 
@@ -64,23 +65,9 @@ fn part_1(
     g: &Graph<(String, u32), ()>,
     distance_matrix: &HashMap<(NodeIndex, NodeIndex), u32>,
     names_idx: &HashMap<String, NodeIndex>,
-    valves: HashSet<NodeIndex>,
+    valves: Vec<NodeIndex>,
+    //valves: HashSet<NodeIndex>,
 ) {
-    /*
-    println!(
-        "valves: {:?}\ngraph: {:?}\n", /*distance_matrix: {:?}"*/
-        valves, g, /*distance_matrix*/
-    );
-        let visited = vec!["BC", "OF", "OQ", "TN", "BV", "HR", "PD"]
-            .iter()
-            .map(|&s| *names_idx.get(&Rc::new(String::from(s))).unwrap())
-            .collect::<Vec<_>>();
-        let filtered = valves
-            .into_iter()
-            .filter(|i| !visited.contains(i))
-            .collect::<Vec<_>>();
-    */
-
     let (path, max_pressure) = maximum_pressure(
         &g,
         *names_idx.get(&String::from("AA")).unwrap(),
@@ -106,7 +93,8 @@ fn part_2(
     g: &Graph<(String, u32), ()>,
     distance_matrix: &HashMap<(NodeIndex, NodeIndex), u32>,
     names_idx: &HashMap<String, NodeIndex>,
-    valves: HashSet<NodeIndex>,
+    valves: Vec<NodeIndex>,
+    //valves: HashSet<NodeIndex>,
 ) {
     let half_size = valves.len() / 2;
 
@@ -114,11 +102,11 @@ fn part_2(
     let mut paths: (Vec<(NodeIndex, u32)>, Vec<(NodeIndex, u32)>) = (vec![], vec![]);
     for size in 1..=half_size {
         for sub_valves_1 in valves.clone().into_iter().combinations(size) {
-            let sub_valves_1 = sub_valves_1.clone().into_iter().collect::<HashSet<_>>();
-            let sub_valves_2 = valves
-                .difference(&sub_valves_1)
+            let valves_set = valves.clone().into_iter().collect::<HashSet<_>>();
+            let sub_valves_2 = valves_set
+                .difference(&sub_valves_1.clone().into_iter().collect::<HashSet<_>>())
                 .map(|x| *x)
-                .collect::<HashSet<_>>();
+                .collect::<Vec<_>>();
 
             let (max_path_1, max_pressure_1) = maximum_pressure(
                 &g,
@@ -145,6 +133,8 @@ fn part_2(
     }
 
     println!("Path: {:?}\nmax_pressure: {}", paths, part_2_max_pressure);
+    //assert!(part_2_max_pressure == 1707, "part 2 sample");
+    assert!(part_2_max_pressure == 1999, "part 2");
 }
 
 fn main() {
@@ -154,8 +144,8 @@ fn main() {
     let re = Regex::new(r"Valve ([A-Z]{2}) has flow rate=([\d]+); .*to valve[s]? (.*)").unwrap();
 
     let mut g = Graph::<(String, u32), ()>::new();
-    // let mut valves = vec![];
-    let mut valves = HashSet::new();
+    let mut valves = vec![];
+    //let mut valves = HashSet::new();
     let mut names_idx = HashMap::new();
     let mut edges = vec![];
 
@@ -177,7 +167,7 @@ fn main() {
 
             names_idx.insert(valve_name.clone(), node_idx);
             if flow_rate > 0 {
-                valves.insert(node_idx);
+                valves.push(node_idx);
             }
         }
     }
@@ -189,9 +179,7 @@ fn main() {
     );
 
     let distance_matrix = floyd_warshall(&g, |_e| 1u32).unwrap();
-    let t = (0..10).permutations(2).collect::<Vec<_>>().len();
-    println!("l: {}", t);
 
-    //part_1(&g, &distance_matrix, &names_idx, valves.clone());
+    part_1(&g, &distance_matrix, &names_idx, valves.clone());
     part_2(&g, &distance_matrix, &names_idx, valves.clone());
 }
