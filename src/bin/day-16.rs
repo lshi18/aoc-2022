@@ -1,44 +1,31 @@
+use itertools::Itertools;
 use petgraph::algo::floyd_warshall::floyd_warshall;
 use petgraph::graph::{Graph, NodeIndex};
 use regex::Regex;
-use std::collections::HashMap;
+use std::collections::{HashMap, HashSet};
 use std::fs;
 
 fn maximum_pressure(
     g: &Graph<(String, u32), ()>,
     curr_node: NodeIndex,
     distance_matrix: &HashMap<(NodeIndex, NodeIndex), u32>,
-    valves: Vec<NodeIndex>,
+    //valves: Vec<NodeIndex>,
+    valves: HashSet<NodeIndex>,
     time_left: u32,
 ) -> (Vec<(NodeIndex, u32)>, u32) {
-    // println!("valves: {:?}", valves);
-
-    /* if time_left <= 0 {
-        return (max_path, max_pressure);
-    }*/
-
-    /*if let Some((m_path, m_press)) = cache.get(&(curr_node, valves.clone(), time_left)) {
-        //println!("cache hit!");
-        return (m_path.clone(), *m_press);
-    };*/
-
     let (_, flow_rate) = g.node_weight(curr_node).unwrap();
 
-    let open_curr_time = if *flow_rate == 0 { 0 } else { 1 };
+    let open_curr_time = open_curr_time(*flow_rate);
 
     let curr_pressure = flow_rate * (time_left - open_curr_time);
 
     let mut max_path = vec![(curr_node, time_left)];
     let mut max_pressure = curr_pressure;
 
-    if valves.len() == 0 {
-        return (vec![(curr_node, time_left)], curr_pressure);
-    }
-
     // opening curr_node's valve
-    for (i, v) in valves.iter().enumerate() {
+    for (_i, v) in valves.iter().enumerate() {
         let mut closed_valves = valves.clone();
-        closed_valves.remove(i);
+        closed_valves.remove(v);
 
         let dist = *distance_matrix.get(&(curr_node, *v)).unwrap();
 
@@ -62,12 +49,102 @@ fn maximum_pressure(
             max_path = one_path;
         }
     }
-    // println!("{:?}, {:?}", max_path, max_pressure);
-    /*cache.insert(
-        (curr_node, valves, time_left),
-        (max_path.clone(), max_pressure),
-    );*/
     (max_path, max_pressure)
+}
+
+fn open_curr_time(flow_rate: u32) -> u32 {
+    if flow_rate == 0 {
+        0
+    } else {
+        1
+    }
+}
+
+fn part_1(
+    g: &Graph<(String, u32), ()>,
+    distance_matrix: &HashMap<(NodeIndex, NodeIndex), u32>,
+    names_idx: &HashMap<String, NodeIndex>,
+    valves: HashSet<NodeIndex>,
+) {
+    /*
+    println!(
+        "valves: {:?}\ngraph: {:?}\n", /*distance_matrix: {:?}"*/
+        valves, g, /*distance_matrix*/
+    );
+        let visited = vec!["BC", "OF", "OQ", "TN", "BV", "HR", "PD"]
+            .iter()
+            .map(|&s| *names_idx.get(&Rc::new(String::from(s))).unwrap())
+            .collect::<Vec<_>>();
+        let filtered = valves
+            .into_iter()
+            .filter(|i| !visited.contains(i))
+            .collect::<Vec<_>>();
+    */
+
+    let (path, max_pressure) = maximum_pressure(
+        &g,
+        *names_idx.get(&String::from("AA")).unwrap(),
+        //*names_idx.get(&Rc::new(String::from("PD"))).unwrap(),
+        &distance_matrix,
+        // filtered,
+        valves.clone(),
+        30,
+    );
+
+    let mut path_n = path
+        .iter()
+        .map(|(p, t)| (g.node_weight(*p).unwrap(), t))
+        .collect::<Vec<_>>();
+    path_n.reverse();
+    println!("Path: {:?}\nmax_pressure: {}", path_n, max_pressure);
+
+    // assert!(max_pressure == 1651, "sample answer");
+    assert!(max_pressure == 1796, "part 1");
+}
+
+fn part_2(
+    g: &Graph<(String, u32), ()>,
+    distance_matrix: &HashMap<(NodeIndex, NodeIndex), u32>,
+    names_idx: &HashMap<String, NodeIndex>,
+    valves: HashSet<NodeIndex>,
+) {
+    let half_size = valves.len() / 2;
+
+    let mut part_2_max_pressure = 0;
+    let mut paths: (Vec<(NodeIndex, u32)>, Vec<(NodeIndex, u32)>) = (vec![], vec![]);
+    for size in 1..=half_size {
+        for sub_valves_1 in valves.clone().into_iter().combinations(size) {
+            let sub_valves_1 = sub_valves_1.clone().into_iter().collect::<HashSet<_>>();
+            let sub_valves_2 = valves
+                .difference(&sub_valves_1)
+                .map(|x| *x)
+                .collect::<HashSet<_>>();
+
+            let (max_path_1, max_pressure_1) = maximum_pressure(
+                &g,
+                *names_idx.get(&String::from("AA")).unwrap(),
+                &distance_matrix,
+                sub_valves_1,
+                26,
+            );
+
+            let (max_path_2, max_pressure_2) = maximum_pressure(
+                &g,
+                *names_idx.get(&String::from("AA")).unwrap(),
+                &distance_matrix,
+                sub_valves_2,
+                26,
+            );
+
+            let mp = max_pressure_1 + max_pressure_2;
+            if mp > part_2_max_pressure {
+                part_2_max_pressure = mp;
+                paths = (max_path_1, max_path_2);
+            }
+        }
+    }
+
+    println!("Path: {:?}\nmax_pressure: {}", paths, part_2_max_pressure);
 }
 
 fn main() {
@@ -77,11 +154,9 @@ fn main() {
     let re = Regex::new(r"Valve ([A-Z]{2}) has flow rate=([\d]+); .*to valve[s]? (.*)").unwrap();
 
     let mut g = Graph::<(String, u32), ()>::new();
-
-    let mut valves = vec![];
-
+    // let mut valves = vec![];
+    let mut valves = HashSet::new();
     let mut names_idx = HashMap::new();
-
     let mut edges = vec![];
 
     for line in input.trim().lines() {
@@ -102,7 +177,7 @@ fn main() {
 
             names_idx.insert(valve_name.clone(), node_idx);
             if flow_rate > 0 {
-                valves.push(node_idx);
+                valves.insert(node_idx);
             }
         }
     }
@@ -114,38 +189,9 @@ fn main() {
     );
 
     let distance_matrix = floyd_warshall(&g, |_e| 1u32).unwrap();
+    let t = (0..10).permutations(2).collect::<Vec<_>>().len();
+    println!("l: {}", t);
 
-    /*
-    println!(
-        "valves: {:?}\ngraph: {:?}\n", /*distance_matrix: {:?}"*/
-        valves, g, /*distance_matrix*/
-    );
-        let visited = vec!["BC", "OF", "OQ", "TN", "BV", "HR", "PD"]
-            .iter()
-            .map(|&s| *names_idx.get(&Rc::new(String::from(s))).unwrap())
-            .collect::<Vec<_>>();
-        let filtered = valves
-            .into_iter()
-            .filter(|i| !visited.contains(i))
-            .collect::<Vec<_>>();
-    */
-    let (path, max_pressure) = maximum_pressure(
-        &g,
-        *names_idx.get(&String::from("AA")).unwrap(),
-        //*names_idx.get(&Rc::new(String::from("PD"))).unwrap(),
-        &distance_matrix,
-        // filtered,
-        valves,
-        30,
-    );
-
-    let mut path_n = path
-        .iter()
-        .map(|(p, t)| (g.node_weight(*p).unwrap(), t))
-        .collect::<Vec<_>>();
-    path_n.reverse();
-    println!("Path: {:?}\nmax_pressure: {}", path_n, max_pressure);
-
-    // assert!(max_pressure == 1651, "sample answer");
-    assert!(max_pressure == 1796, "part 1");
+    //part_1(&g, &distance_matrix, &names_idx, valves.clone());
+    part_2(&g, &distance_matrix, &names_idx, valves.clone());
 }
